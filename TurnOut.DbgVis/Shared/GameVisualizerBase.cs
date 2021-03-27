@@ -21,6 +21,8 @@ namespace TurnOut.DbgVis.Shared
         // Initialized from instance service:
         protected TurnPlanningService _turnPlanningService { get; set; }
 
+        public double zoomFactor = 1.0;
+
 
         protected override void OnInitialized()
         {

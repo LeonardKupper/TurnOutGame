@@ -19,6 +19,8 @@
 else
 {
 
+    <input type="number" @bind="zoomFactor"/>
+
     @if (Instance.GameHasEnded)
     {
         @if (Instance.WinningTeam == _clientService.Player.Team)
@@ -86,9 +88,11 @@ else
                                                     {
                                                         <i style="@("font-size: 0.7rem; color: " + carriedFlagColor + ";")" class="fas fa-flag mr-1"></i>
                                                     }
-                                                    <i style="font-size: 0.8rem; color: black;" class="@directionIcon"></i>
-                                                    @unit.Player.Name
-                                                    @entityType.Name.Substring(0, entityType.Name.Length - 4)
+                                                    <span style="@("font-size: " + (zoomFactor * 0.8) + "rem;")">
+                                                        <i style="color: black;" class="@directionIcon"></i>
+                                                        @unit.Player.Name
+                                                        @entityType.Name.Substring(0, entityType.Name.Length - 4)
+                                                    </span>
                                                 </span>
                                             }
 
