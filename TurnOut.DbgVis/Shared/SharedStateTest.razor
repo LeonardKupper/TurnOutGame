@@ -1,0 +1,13 @@
+﻿
+@inherits SharedStateTestBase
+
+<h1>Shared state test</h1>
+
+@foreach (var message in _sharedStateService.Messages)
+{
+    <p>@message</p>
+}
+
+<input type="text" @bind="NewMessage" />
+
+<button @onclick="SendMessage">Send</button>

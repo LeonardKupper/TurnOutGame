@@ -1,0 +1,186 @@
+﻿@using TurnOut.Core.Models.Entities;
+@using TurnOut.Core.Models.Entities.Units;
+@using Turnout.Core.Utility;
+
+@inherits GameVisualizerBase
+
+@if (_clientService.Player is null)
+{
+    // select a player
+
+    <h1>Select player:</h1>
+
+    foreach (var freePlayer in _gameInstanceService.TempGetUnboundPlayers())
+    {
+        <button @onclick="() => _clientService.TempAssignPlayer(freePlayer)">@freePlayer.Team.TeamName - @freePlayer.Name</button>
+        <br />
+    }
+}
+else
+{
+
+    @if (Instance.GameHasEnded)
+    {
+        @if (Instance.WinningTeam == _clientService.Player.Team)
+        {
+            <h1 style="color: forestgreen;">Your Team Has Won!</h1>
+        }
+        else
+        {
+            <h1 style="color: red;">Your Team Has Lost!</h1>
+        }
+    }
+    else
+    {
+
+
+        <table>
+            <tr>
+                <td colspan="2">
+
+                    <table>
+                        @{
+                            // rotate the map for team alpha (by mirroring x and y board axis)
+                            bool rotate = (_clientService.Player.Team == Instance.TeamOmega);
+                            // wtf boi this is hacky-
+                            int yStart = rotate ? (Instance.GameWorld.BoardDimensions.h - 1) : 0;
+                            int yEnd = rotate ? -1 : (Instance.GameWorld.BoardDimensions.h);
+                            int xStart = rotate ? (Instance.GameWorld.BoardDimensions.w - 1) : 0;
+                            int xEnd = rotate ? -1 : (Instance.GameWorld.BoardDimensions.w);
+                            int step = rotate ? -1 : 1;
+                        }
+                        @for (int y = yStart; y != yEnd; y += step)
+                        {
+                            <tr>
+                                @for (int x = xStart; x != xEnd; x += step)
+                                {
+                                    EntityBase e = Instance.GameWorld.Board[x, y];
+                                    string animation = Instance.GameWorld.Animations[x, y];
+
+                                    bool isActive = (e is not null) && (e == Instance.CurrentlyExecutingUnit);
+                                    <td style="@("font-size: 0.35em; height: 3.1rem; width: 3.1rem; border: " + (isActive ? "3px solid black" : "1px solid gray") + "; text-align: center;")">
+                                        
+                                        @if (animation != null)
+                                        {
+                                            <div style="@("position: absolute; margin: 0; height: 2.4rem; width: 2.9rem; background-color: " + animation + "; opacity: 0.5;")"></div>
+                                        }
+
+                                        @if (e != null)
+                                        {
+                                            Type entityType = e.GetType();
+
+                                            @if (entityType.IsAssignableTo(typeof(UnitBase)))
+                                            {
+                                                var unit = (UnitBase)e;
+                                                string directionIcon = unit.Facing.RotateClockWise(rotate ? 2 : 0) switch
+                                                {
+                                                    UnitDirection.North => "fas fa-arrow-up",
+                                                    UnitDirection.East => "fas fa-arrow-right",
+                                                    UnitDirection.South => "fas fa-arrow-down",
+                                                    UnitDirection.West => "fas fa-arrow-left",
+                                                    _ => ""
+                                                };
+                                                string carriedFlagColor = GetCarriedFlagColor(unit);
+                                                <span style="@("color: " + GetTeamColor(unit.Player.Team))">
+                                                    @if (carriedFlagColor is not null)
+                                                    {
+                                                        <i style="@("font-size: 0.7rem; color: " + carriedFlagColor + ";")" class="fas fa-flag mr-1"></i>
+                                                    }
+                                                    <i style="font-size: 0.8rem; color: black;" class="@directionIcon"></i>
+                                                    @unit.Player.Name
+                                                    @entityType.Name.Substring(0, entityType.Name.Length - 4)
+                                                </span>
+                                            }
+
+                                            @if (entityType.IsAssignableTo(typeof(Obstacle)))
+                                            {
+                                                <div style="width: 100%; height: 100%; background-color: gray;"></div>
+                                            }
+
+                                            @if (entityType.IsAssignableTo(typeof(Flag)))
+                                            {
+                                                var flag = (Flag)e;
+                                                <i style="@("font-size: 1.8rem; color: " + GetTeamColor(flag.Team) + ";")" class="far fa-flag"></i>
+                                            }
+                                        } else
+                                        {
+                                            <span>&nbsp;</span>
+                                        }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </table>
+
+                </td>
+            </tr>
+            <tr>
+
+                <td style="width: 25rem;">
+                    <h5>Turn Plan:</h5>
+                    @foreach (var unit in TurnPlan.Keys.Where(u => u.Player.Team == Player.Team))
+                    {
+                        <p>
+                            <span>@unit.Player.Name - @unit.GetType().Name:</span>
+                            @foreach (var move in TurnPlan[unit])
+                            {
+                                string[] icons = GetIconsForMove((dynamic)move);
+                                <span class="ml-2" style="border: 1px solid grey;">
+                                    @foreach (var icon in icons)
+                                    {
+                                        <i class="@icon"></i>
+                                    }
+                                </span>
+                            }
+                        </p>
+                    }
+                </td>
+
+                @if (Instance.IsInPlanningPhase)
+                {
+                    var aliveUnits = _turnPlanningService.GetAliveUnits(Player);
+            <td>
+                <h5>Player: @Player.Name</h5>
+
+                @if (aliveUnits.Count == 0)
+                {
+                    <p>No units left. You are in spectator mode.</p>
+                }
+                else if (Player.IsReadyInTurn)
+                {
+                    <p>Waiting for other players...</p>
+                }
+                else
+                {
+                    @foreach (var unit in aliveUnits)
+                    {
+                        <span>@(unit.GetType().Name):</span>
+                        @foreach (var move in _turnPlanningService.GetAvailableMoves(unit))
+                        {
+                            bool movesLeft = _turnPlanningService.UnitHasMovesLeft(unit);
+                            string[] icons = GetIconsForMove((dynamic)move);
+
+                            <button disabled="@(!movesLeft)" @onclick="() => _turnPlanningService.PlanMoveForUnit(unit, move)">
+                                @foreach (var icon in icons)
+                                {
+                                    <i class="@icon"></i>
+                                }
+                            </button>
+                        }
+                        <button @onclick="() => _turnPlanningService.UndoLastMoveForUnit(unit)">UNDO</button>
+                        <br />
+                    }
+
+                    <button @onclick="() => _clientService.SignalTurnIsReady()">Ready!</button>
+                    @*<button @onclick="() => _gameInstanceService.ExecuteTurn()">FORCE TURN</button>*@
+                }
+
+            </td>
+                }
+            </tr>
+        </table>
+
+
+    }
+
+}
