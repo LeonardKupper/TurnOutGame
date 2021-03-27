@@ -18,6 +18,7 @@ namespace TurnOut.Core.Services
         {
             Player = player;
             Player.IsBoundToClient = true;
+            _gameInstanceService.DispatchRenderUpdate();
         }
 
         public Task SignalTurnIsReady()
