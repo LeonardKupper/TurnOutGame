@@ -38,8 +38,8 @@ else
 
         <table>
             <tr>
-                <td colspan="2">
-
+                <td>
+                    <!-- MAP -->
                     <table>
                         @{
                             // rotate the map for team alpha (by mirroring x and y board axis)
@@ -61,7 +61,7 @@ else
 
                                     bool isActive = (e is not null) && (e == Instance.CurrentlyExecutingUnit);
                                     <td style="@("font-size: 0.35em; height: 3.1rem; width: 3.1rem; border: " + (isActive ? "3px solid black" : "1px solid gray") + "; text-align: center;")">
-                                        
+
                                         @if (animation != null)
                                         {
                                             <div style="@("position: absolute; margin: 0; height: 2.4rem; width: 2.9rem; background-color: " + animation + "; opacity: 0.5;")"></div>
@@ -106,7 +106,8 @@ else
                                                 var flag = (Flag)e;
                                                 <i style="@("font-size: 1.8rem; color: " + GetTeamColor(flag.Team) + ";")" class="far fa-flag"></i>
                                             }
-                                        } else
+                                        }
+                                        else
                                         {
                                             <span>&nbsp;</span>
                                         }
@@ -117,70 +118,76 @@ else
                     </table>
 
                 </td>
-            </tr>
-            <tr>
+                <td style="padding: 1em;vertical-align: top; width: 20rem;">
+                    <!-- DASHBOARD -->
+                    <div style="height: 20rem;">
+                        @if (Instance.IsInPlanningPhase)
+                        {
+                            var aliveUnits = _turnPlanningService.GetAliveUnits(Player);
+                            <h5>Player: @Player.Name</h5>
 
-                <td style="width: 25rem;">
-                    <h5>Turn Plan:</h5>
-                    @foreach (var unit in TurnPlan.Keys.Where(u => u.Player.Team == Player.Team))
-                    {
-                        <p>
-                            <span>@unit.Player.Name - @unit.GetType().Name:</span>
-                            @foreach (var move in TurnPlan[unit])
+                            @if (aliveUnits.Count == 0)
                             {
-                                string[] icons = GetIconsForMove((dynamic)move);
-                                <span class="ml-2" style="border: 1px solid grey;">
-                                    @foreach (var icon in icons)
-                                    {
-                                        <i class="@icon"></i>
-                                    }
-                                </span>
+                                <p>No units left. You are in spectator mode.</p>
                             }
-                        </p>
+                            else if (Player.IsReadyInTurn)
+                            {
+                                <p>Waiting for other players...</p>
+                                <button @onclick="() => _clientService.RevokeReady()">Not Ready!</button>
+                            }
+                            else
+                            {
+                                @foreach (var unit in aliveUnits)
+                                {
+                                    <span>@(unit.GetType().Name):</span>
+                                    @foreach (var move in _turnPlanningService.GetAvailableMoves(unit))
+                                    {
+                                        bool movesLeft = _turnPlanningService.UnitHasMovesLeft(unit);
+                                        string[] icons = GetIconsForMove((dynamic)move);
+
+                                        <button disabled="@(!movesLeft)" @onclick="() => _turnPlanningService.PlanMoveForUnit(unit, move)">
+                                            @foreach (var icon in icons)
+                                            {
+                                                <i class="@icon"></i>
+                                            }
+                                        </button>
+                                    }
+                                    <button @onclick="() => _turnPlanningService.UndoLastMoveForUnit(unit)">UNDO</button>
+                                    <br />
+                                }
+
+                                <button @onclick="() => _clientService.SignalTurnIsReady()">Ready!</button>
+                                @*<button @onclick="() => _gameInstanceService.ExecuteTurn()">FORCE TURN</button>*@
+                            }
+                        }
+                    </div>
+                    <div>
+                        <h5>Turn Plan:</h5>
+                        @foreach (var unit in TurnPlan.Keys.Where(u => u.Player.Team == Player.Team))
+                        {
+                            <p>
+                                <span>@unit.Player.Name - @unit.GetType().Name:</span>
+                                @foreach (var move in TurnPlan[unit])
+                                {
+                                    string[] icons = GetIconsForMove((dynamic)move);
+                                    <span class="ml-2" style="border: 1px solid grey;">
+                                        @foreach (var icon in icons)
+                                        {
+                                            <i class="@icon"></i>
+                                        }
+                                    </span>
+                                }
+                            </p>
+                        }
+                    </div>
+                    @if (Instance.TurnPlanningCountdown.IsActive)
+                    {
+                        <div style="color: red; font-weight: 700;">
+                            @(Instance.TurnPlanningCountdown.Remaining)s left!
+                        </div>
                     }
                 </td>
 
-                @if (Instance.IsInPlanningPhase)
-                {
-                    var aliveUnits = _turnPlanningService.GetAliveUnits(Player);
-            <td>
-                <h5>Player: @Player.Name</h5>
-
-                @if (aliveUnits.Count == 0)
-                {
-                    <p>No units left. You are in spectator mode.</p>
-                }
-                else if (Player.IsReadyInTurn)
-                {
-                    <p>Waiting for other players...</p>
-                }
-                else
-                {
-                    @foreach (var unit in aliveUnits)
-                    {
-                        <span>@(unit.GetType().Name):</span>
-                        @foreach (var move in _turnPlanningService.GetAvailableMoves(unit))
-                        {
-                            bool movesLeft = _turnPlanningService.UnitHasMovesLeft(unit);
-                            string[] icons = GetIconsForMove((dynamic)move);
-
-                            <button disabled="@(!movesLeft)" @onclick="() => _turnPlanningService.PlanMoveForUnit(unit, move)">
-                                @foreach (var icon in icons)
-                                {
-                                    <i class="@icon"></i>
-                                }
-                            </button>
-                        }
-                        <button @onclick="() => _turnPlanningService.UndoLastMoveForUnit(unit)">UNDO</button>
-                        <br />
-                    }
-
-                    <button @onclick="() => _clientService.SignalTurnIsReady()">Ready!</button>
-                    @*<button @onclick="() => _gameInstanceService.ExecuteTurn()">FORCE TURN</button>*@
-                }
-
-            </td>
-                }
             </tr>
         </table>
 

@@ -56,7 +56,7 @@ namespace TurnOut.Core.Services
                     Facing = UnitDirection.West
                 },
             };
-            teamAlpha.Players = new List<Player> { alice, adam };
+            teamAlpha.Players = new List<Player> { alice };
 
 
 
@@ -96,14 +96,15 @@ namespace TurnOut.Core.Services
                     Facing = UnitDirection.East
                 },
             };
-            teamOmega.Players = new List<Player> { bob, berta };
+            teamOmega.Players = new List<Player> { bob };
 
             var gi = new GameInstance
             {
                 GameWorld = new World(20, 15),
                 TeamAlpha = teamAlpha,
                 TeamOmega = teamOmega,
-                IsInPlanningPhase = true
+                IsInPlanningPhase = true,
+                TurnPlanningCountdown = new CountdownState()
             };
 
             // Place units

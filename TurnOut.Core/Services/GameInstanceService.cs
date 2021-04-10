@@ -56,13 +56,69 @@ namespace TurnOut.Core.Services
             GameInstance.WinningTeam = winningTeam;
         }
 
-        public async Task CheckForTurnExecution()
+        /// <summary>
+        /// This method is supposed to be called whenever a player signals that he is ready,
+        /// i.e. has finished to plan the next turn. The method checks the planning status for all
+        /// players in the instance and takes actions accordingly.
+        /// </summary>
+        /// <returns></returns>
+        public void CheckPlanningState()
         {
+
+            // Check whether all players are ready, if yes, execute the turn.
             var activePlayers = AllPlayers.Where(p => _turnPlanningService.GetAliveUnits(p).Count > 0);
             if (activePlayers.All(p => p.IsReadyInTurn))
             {
-                await ExecuteTurn();
+                // Stop countdown if it is still running (i.e. all players signaled ready before it ran out)
+                if (GameInstance.TurnPlanningCountdown.IsActive)
+                {
+                    GameInstance.TurnPlanningCountdown.IsActive = false;
+                }
+                _ = ExecuteTurn();
+                return;
             }
+
+            // Check for one team to be ready completely, start the countdown for the remaining planning phase time
+            // if it is not already activated.
+            var teams = AllPlayers.GroupBy(p => p.Team);
+            if (!GameInstance.TurnPlanningCountdown.IsActive && teams.Any(team => team.All(players => players.IsReadyInTurn)))
+            {
+                _ = ExecuteCountdown();
+                return;
+            }
+
+        }
+
+        public async Task ExecuteCountdown()
+        {
+            var countdown = GameInstance.TurnPlanningCountdown;
+            countdown.Remaining = 30;
+            countdown.IsActive = true;
+            DispatchRenderUpdate();
+            await Task.Run(() =>
+            {
+                while(countdown.IsActive)
+                {
+                    Thread.Sleep(1000);
+                    countdown.Remaining--;
+                    DispatchRenderUpdate();
+                    if (countdown.Remaining < 1)
+                    {
+                        // Stop countdown and force ready state for all players
+                        countdown.IsActive = false;
+                        ForceAllPlayersReady();
+                    }
+                }
+            });
+        }
+
+        private void ForceAllPlayersReady()
+        {
+            foreach (var player in AllPlayers)
+            {
+                player.IsReadyInTurn = true;
+            }
+            CheckPlanningState();
         }
 
         public async Task ExecuteTurn()

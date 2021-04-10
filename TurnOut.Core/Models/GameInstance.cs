@@ -18,7 +18,10 @@ namespace TurnOut.Core.Models
         public bool GameHasEnded => (WinningTeam is not null);
 
         public bool IsInPlanningPhase { get; set; }
+        public CountdownState TurnPlanningCountdown { get; set; }
 
         public UnitBase CurrentlyExecutingUnit { get; set; }
+
+
     }
 }

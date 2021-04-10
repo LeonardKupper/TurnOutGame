@@ -21,10 +21,15 @@ namespace TurnOut.Core.Services
             _gameInstanceService.DispatchRenderUpdate();
         }
 
-        public Task SignalTurnIsReady()
+        public void SignalTurnIsReady()
         {
             Player.IsReadyInTurn = true;
-            return _gameInstanceService.CheckForTurnExecution();
+            _gameInstanceService.CheckPlanningState();
+        }
+
+        public void RevokeReady()
+        {
+            Player.IsReadyInTurn = false;
         }
 
     }
