@@ -96,7 +96,7 @@ namespace TurnOut.Core.Services
                     Facing = UnitDirection.East
                 },
             };
-            teamOmega.Players = new List<Player> { bob };
+            teamOmega.Players = new List<Player> { };
 
             var gi = new GameInstance
             {
@@ -108,10 +108,11 @@ namespace TurnOut.Core.Services
             };
 
             // Place units
-            gi.GameWorld.Board[17, 14] = alice.Units[0];
-            gi.GameWorld.Board[18, 14] = alice.Units[1];
-            gi.GameWorld.Board[19, 13] = adam.Units[0];
-            gi.GameWorld.Board[19, 12] = adam.Units[1];
+            gi.GameWorld.Board[10, 7] = alice.Units[0];
+            //gi.GameWorld.Board[17, 14] = alice.Units[0];
+            //gi.GameWorld.Board[18, 14] = alice.Units[1];
+            //gi.GameWorld.Board[19, 13] = adam.Units[0];
+            //gi.GameWorld.Board[19, 12] = adam.Units[1];
 
             gi.GameWorld.Board[2, 0] = bob.Units[0];
             gi.GameWorld.Board[1, 0] = bob.Units[1];

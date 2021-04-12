@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using TurnOut.Core.Models;
 using TurnOut.Core.Models.Entities;
 
@@ -28,6 +29,21 @@ namespace TurnOut.Core.Services
                 }
             }
             return null;
+        }
+
+        public List<(int x, int y)> GetPositionsByType<TEntity>() where TEntity : EntityBase
+        {
+            var foundPositions = new List<(int x, int y)>();
+            for (int x = 0; x < world.BoardDimensions.w; ++x)
+            {
+                for (int y = 0; y < world.BoardDimensions.h; ++y)
+                {
+                    var e = world.Board[x, y];
+                    if (e is not null && e.GetType().IsAssignableTo(typeof(TEntity)))
+                        foundPositions.Add((x, y));
+                }
+            }
+            return foundPositions;
         }
 
         public bool IsValidPosition((int x, int y) position)

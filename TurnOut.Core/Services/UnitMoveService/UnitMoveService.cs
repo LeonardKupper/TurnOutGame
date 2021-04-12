@@ -21,7 +21,12 @@ namespace TurnOut.Core.Services
         public bool TryExecuteMove(UnitBase executingUnit, IUnitMove moveToExecute)
         {
             // Invoke move implementation based on dynamic polymorphism:
-            return ExecuteMoveInternal(executingUnit, (dynamic)moveToExecute);
+            bool status = ExecuteMoveInternal(executingUnit, (dynamic)moveToExecute);
+
+            // Update visible positions after move
+            if (status) _gameInstanceService.UpdateVisiblePositionsForTeam(executingUnit.Player.Team);
+            
+            return status;
         }
 
         // Implementations of the different moves in partial classes
@@ -32,7 +37,7 @@ namespace TurnOut.Core.Services
 
         // Shared utility:
 
-        private (int x, int y) GetDirectionVector(UnitDirection direction)
+        public (int x, int y) GetDirectionVector(UnitDirection direction)
         {
             int dx = 0, dy = 0;
             switch (direction)
@@ -94,6 +99,7 @@ namespace TurnOut.Core.Services
 
             _gameWorldService.RemoveEntityAt(pos.Value);
             _gameWorldService.ReplaceEntityAt(targetPos, unit);
+
             return true;
         }
     }

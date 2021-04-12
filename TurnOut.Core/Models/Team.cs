@@ -17,5 +17,7 @@ namespace TurnOut.Core.Models
         public List<Player> Players { get; set; }
 
         public Flag Flag { get; set; } = new Flag();
+
+        public List<(int x, int y)> VisiblePositions { get; set; }
     }
 }
