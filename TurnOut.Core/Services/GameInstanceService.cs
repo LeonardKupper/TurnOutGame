@@ -19,6 +19,7 @@ namespace TurnOut.Core.Services
         private readonly TurnPlanningService _turnPlanningService;
         private readonly GameWorldService _gameWorldService;
         private readonly UnitMoveService _unitMoveService;
+        private readonly FieldOfVisionService _fieldOfVisionService;
 
         public event EventHandler RenderUpdate;
 
@@ -30,6 +31,7 @@ namespace TurnOut.Core.Services
             _turnPlanningService = new TurnPlanningService(this);
             _gameWorldService = new GameWorldService(this);
             _unitMoveService = new UnitMoveService(this, _gameWorldService);
+            _fieldOfVisionService = new FieldOfVisionService();
         }
 
         public List<Player> AllPlayers {
@@ -170,5 +172,97 @@ namespace TurnOut.Core.Services
             // Dispatch to all client render update handlers
             RenderUpdate?.Invoke(this, EventArgs.Empty);
         }
+    }
+
+    public class FieldOfVisionService
+    {
+        const double CONV_DEG = (180 / Math.PI);
+
+        /// <summary>
+        /// For a vector with x and y components this computes an absolute angle in degrees, where
+        /// NORTH (x=0, y=-1) becomes 0°, EAST (x=1, y=0) becomes 90°, ...
+        /// </summary>
+        /// <param name="vector">The input vector.</param>
+        /// <returns>An angle in degrees</returns>
+        private double GetNorthBasedAbsDeg((float x, float y) vector)
+        {
+            // special case of x = 0, prevent division by zero
+            if (vector.x == 0)
+            {
+                if (vector.y <= 0) return 0;
+                else return 180;
+            }
+            return (CONV_DEG * Math.Atan(vector.y / vector.x)) + ((vector.x < 0) ? 270 : 90);
+        }
+
+        /// <summary>
+        /// Takes two angles given in degrees and computes the deviation , where clockwise deviation
+        /// ranges from 0° to +180° and counter-clockwise deviation from 0° to -180°
+        /// </summary>
+        /// <param name="theta">The deviating angle in degrees.</param>
+        /// <param name="phi">The reference angle in degrees.</param>
+        /// <returns>An angle between minus and plus 180°.</returns>
+        private double GetRelativeDeg(double theta, double phi)
+        {
+            double rho = theta - phi;
+            return (rho <= 180) ? rho : (rho - 360);
+        }
+
+        private double GetEuclidDist(float dx, float dy)
+        {
+            return Math.Sqrt((dx * dx) + (dy * dy));
+        }
+
+        private bool CheckCoordinateVisibility((float x, float y) coords, Observer observer)
+        {
+            (float x, float y) viewVector = (coords.x - observer.Position.x, coords.y - observer.Position.y);
+            
+            // Check by distance
+            double distance = GetEuclidDist(viewVector.x, viewVector.y);
+            if (distance > observer.MaxViewDistance) return false;
+
+            // Check by angle
+            double absTargetAngle = GetNorthBasedAbsDeg(viewVector);
+            double absObserverAngle = GetNorthBasedAbsDeg(observer.FacingDirection);
+            double relAngle = GetRelativeDeg(absTargetAngle, absObserverAngle);
+            if (relAngle > (observer.FovAngle * 0.5)) return false;
+
+            // Check by obstacle blocking
+
+            return true;
+        }
+
+        private bool CheckMapPositionVisibility((int x, int y) mapPos, List<Observer> observers)
+        {
+            // Check if at least 2 corners are visible
+            int visibleCornerCount = 0;
+            for (int i = 0; (i < 4) && (visibleCornerCount < 2); i++)
+            {
+                int x = mapPos.x + (i < 2 ? 0 : 1);
+                int y = mapPos.y + ((i % 2 == 0) ? 0 : 1);
+                foreach (var observer in observers)
+                {
+                    if (CheckCoordinateVisibility((x, y), observer))
+                    {
+                        visibleCornerCount++;
+                        break;
+                    }
+                }
+            }
+            return (visibleCornerCount >= 2);
+        }
+
+        public bool CheckMapPositionVisibleForTeam((int x, int y) mapPos, Team team)
+        {
+            var units = team.Players.SelectMany(p => p.Units);
+        }
+    }
+
+    public class Observer
+    {
+        public (float x, float y) Position { get; set; }
+        public (float dx, float dy) FacingDirection { get; set; }
+        public double FovAngle { get; set; }
+        public float MaxViewDistance { get; set; }
     }
 }
