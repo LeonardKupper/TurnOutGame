@@ -31,6 +31,13 @@ namespace TurnOut.Core.Models.Entities
             Extensions.RemoveAll(e => e.GetType() == typeof(TExtension));
         }
 
+        protected void ConfigureExtension<TExtension>(Action<TExtension> configuration) where TExtension : IEntityExtension
+        {
+            var ext = (TExtension)Extensions.Where(e => e.GetType() == typeof(TExtension)).FirstOrDefault();
+            if (ext is not null)
+                configuration.Invoke(ext);
+        }
+
         public bool Has<TExtension>() where TExtension : IEntityExtension
         {
             return Has<TExtension>(out _);

@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Turnout.Core.Utility;
 using TurnOut.Core.Models;
+using TurnOut.Core.Models.Entities;
 using TurnOut.Core.Models.Entities.Units;
 using TurnOut.Core.Models.EntityExtensions;
 using TurnOut.Core.Services;
@@ -22,6 +23,23 @@ namespace TurnOut.DbgVis.Shared
         protected TurnPlanningService _turnPlanningService { get; set; }
 
         public double zoomFactor = 1.0;
+
+        protected void ToggleObstacle(int x, int y)
+        {
+            return;
+            var existing = Instance.GameWorld.Board[x, y];
+            if (existing is null)
+            {
+                Instance.GameWorld.Board[x, y] = new Obstacle();
+            }
+            else if (existing.GetType() == typeof(Obstacle))
+            {
+                Instance.GameWorld.Board[x, y] = null;
+            }
+            _gameInstanceService.UpdateVisiblePositionsForTeam(Instance.TeamAlpha);
+            _gameInstanceService.UpdateVisiblePositionsForTeam(Instance.TeamOmega);
+            _gameInstanceService.DispatchRenderUpdate();
+        }
 
 
         protected override void OnInitialized()

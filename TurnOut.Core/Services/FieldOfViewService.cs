@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Turnout.Core.Utility;
 using TurnOut.Core.Models;
 using TurnOut.Core.Models.Entities;
+using TurnOut.Core.Models.Entities.Units;
+using TurnOut.Core.Models.EntityExtensions;
 
 namespace TurnOut.Core.Services
 {
@@ -59,19 +62,47 @@ namespace TurnOut.Core.Services
             return Math.Sqrt((dx * dx) + (dy * dy));
         }
 
-        private bool CheckCoordinateVisibility((float x, float y) coords, FieldOfView observer, List<(int x, int y)> blockedPositions)
+        private bool TestObserverAngleRangeBlocking(List<double> blockingRangeAngles, double testAngle)
+        {
+            // Calculate the range bounds
+            (double lower, double upper) blockedAngleRange = (180, -180);
+            // First simple approach is to assume the minimum angle to be the left bound
+            // and the maximum angle as right bound
+            blockedAngleRange.lower = blockingRangeAngles.Min();
+            blockedAngleRange.upper = blockingRangeAngles.Max();
+            // Check the resulting ranges size
+            var blockedAngleRangeSize = blockedAngleRange.upper - blockedAngleRange.lower;
+            bool behindObserver = blockedAngleRangeSize > 180;
+            if (behindObserver)
+            {
+                // Here the obstacle is behind the observer plane
+                // This is a special case, where the range actually needs to be "inverted"
+                // To achieve this, the left bound is determined by the highest negative
+                // and the right bound by the smallest positive angle value.
+                blockedAngleRange.lower = blockingRangeAngles.Where(a => a < 0).Max();
+                blockedAngleRange.upper = blockingRangeAngles.Where(a => a >= 0).Min();
+            }
+            // Check if the target angle falls between the ranges left and right angle limits
+            bool inAngleRange = (testAngle > blockedAngleRange.lower) && (testAngle < blockedAngleRange.upper);
+            // Use XOR of behindObserver and inAngleRange for the actual blocking test:
+            // That's because in the case of the obstacle being located behind the observer plane, left and right
+            // bounds need to be switched, therefore negating inAngleRange, which describes the target angle being
+            // inside the range from a front-facing perspective.
+            return (behindObserver ^ inAngleRange);
+        }
+
+        private bool CheckCoordinateVisibility((float x, float y) coords, GlobalFieldOfView observer, List<(int x, int y)> blockedPositions)
         {
             (float x, float y) viewVector = (coords.x - observer.Position.x, coords.y - observer.Position.y);
             
             // Check by distance
             double distance = GetEuclidDist(viewVector.x, viewVector.y);
-            if (distance > observer.MaxViewDistance) return false;
+            if (distance > observer.ViewDepth) return false;
 
             // Check by angle
             double absTargetAngle = GetNorthBasedAbsDeg(viewVector);
-            double absObserverAngle = GetNorthBasedAbsDeg(observer.FacingDirection);
-            double relTargetAngle = GetRelativeDeg(absTargetAngle, absObserverAngle);
-            if (Math.Abs(relTargetAngle) > (observer.FovAngle * 0.5))
+            double relTargetAngle = GetRelativeDeg(absTargetAngle, observer.DirectionAngle);
+            if (Math.Abs(relTargetAngle) > (observer.ViewAngle * 0.5))
                 return false;
 
             // Check by obstacle blocking
@@ -82,36 +113,28 @@ namespace TurnOut.Core.Services
                 var blockDistance = GetEuclidDist(blockVector.x, blockVector.y);
                 if (blockDistance < distance)
                 {
-                    // could be in front of target, compute blocked angle range from all 4 corners
-                    (double lower, double upper) blockedAngleRange = (180, -180);
+                    var relCornerAngles = new List<double>();
+                    // could be in front of target, compute relative angles of all 4 obstacle corners
                     for (int i = 0; (i < 4); i++)
                     {
-                        float x = block.x + (i < 2 ? 0.0f : 1.0f);
-                        float y = block.y + ((i % 2 == 0) ? 0.0f : 1.0f);
+                        // move corners out by a small notch to prevent seeing through infinitesimal gaps between diagonal obstacles
+                        float x = block.x + (i < 2 ? -0.01f : 1.01f);
+                        float y = block.y + ((i % 2 == 0) ? -0.01f : 1.01f);
                         var cornerVector = (x: x - observer.Position.x, y: y - observer.Position.y);
                         var absCornerAngle = GetNorthBasedAbsDeg(cornerVector);
-                        var relCornerAngle = GetRelativeDeg(absCornerAngle, absObserverAngle);
-                        // Set min and max for range accordingly
-                        blockedAngleRange.lower = Math.Min(blockedAngleRange.lower, relCornerAngle);
-                        blockedAngleRange.upper = Math.Max(blockedAngleRange.upper, relCornerAngle);
+                        var relCornerAngle = GetRelativeDeg(absCornerAngle, observer.DirectionAngle);
+                        relCornerAngles.Add(relCornerAngle);
                     }
-                    if ((blockedAngleRange.lower < -90.1f) && (blockedAngleRange.upper > 90.1f))
-                    {
-                        // obstacle is actually behind observer.
-                        continue;
-                    }
-                    if (relTargetAngle > blockedAngleRange.lower && relTargetAngle < blockedAngleRange.upper)
-                    {
-                        // The coordinate is in the blocked angle range, hence not visible
-                        return false;
-                    }
+
+                    bool isBlocked = TestObserverAngleRangeBlocking(relCornerAngles, relTargetAngle);
+                    if (isBlocked) return false;
                 }
             }
 
             return true;
         }
 
-        private bool CheckMapPositionVisibility((int x, int y) mapPos, List<FieldOfView> observers, List<(int x, int y)> blockedPositions)
+        private bool CheckMapPositionVisibility((int x, int y) mapPos, List<GlobalFieldOfView> observers, List<(int x, int y)> blockedPositions)
         {
             // Test if at least one test coordinate is visible
             for (int i = 0; (i < 4); i++)
@@ -126,30 +149,42 @@ namespace TurnOut.Core.Services
             return false;
         }
 
-        private List<FieldOfView> GetTeamFOVs(Team team)
+        private List<GlobalFieldOfView> GetGlobalFieldsOfView(UnitBase unit)
+        {
+            var globalFOVs = new List<GlobalFieldOfView>();
+            if (!unit.Has<VisionExtension>(out var unitVision)) return globalFOVs;
+
+            var pos = _gameWorldService.GetEntityPosition(unit);
+            if (!pos.HasValue) return globalFOVs;
+            var unitCenter = (x: pos.Value.x + 0.5f, y: pos.Value.y + 0.5f);
+            var frontVector = _unitMoveService.GetDirectionVector(unit.Facing);
+            var rightVector = _unitMoveService.GetDirectionVector(unit.Facing.RotateClockWise(1));
+            var unitFacingAngle = GetNorthBasedAbsDeg(frontVector);
+
+            foreach (var relativeFieldOfView in unitVision.RelativeFOVs)
+            {
+                var offset = (x: relativeFieldOfView.PostionOffset.front * frontVector.x
+                                 + relativeFieldOfView.PostionOffset.right * rightVector.x,
+                              y: relativeFieldOfView.PostionOffset.front * frontVector.y
+                                 + relativeFieldOfView.PostionOffset.right * rightVector.y);
+                globalFOVs.Add(new GlobalFieldOfView
+                {
+                    Position = (unitCenter.x + offset.x, unitCenter.y + offset.y),
+                    DirectionAngle = unitFacingAngle + relativeFieldOfView.AngleOffset,
+                    ViewAngle = relativeFieldOfView.ViewAngle,
+                    ViewDepth = relativeFieldOfView.ViewDepth
+                });
+            }
+            return globalFOVs;
+        }
+
+        private List<GlobalFieldOfView> GetTeamFOVs(Team team)
         {
             var units = team.Players.SelectMany(p => p.Units);
-            var fovs = new List<FieldOfView>();
+            var fovs = new List<GlobalFieldOfView>();
             foreach (var unit in units)
             {
-                var pos = _gameWorldService.GetEntityPosition(unit);
-                if (!pos.HasValue) continue;
-                var fovCoords = (pos.Value.x + 0.5f, pos.Value.y + 0.5f);
-                var dirVec = _unitMoveService.GetDirectionVector(unit.Facing);
-                fovs.Add(new FieldOfView
-                {
-                    Position = fovCoords,
-                    FacingDirection = dirVec,
-                    FovAngle = 120,
-                    MaxViewDistance = 7.5f
-                });
-                fovs.Add(new FieldOfView
-                {
-                    Position = fovCoords,
-                    FacingDirection = dirVec,
-                    FovAngle = 360,
-                    MaxViewDistance = 1.4f
-                });
+                fovs.AddRange(GetGlobalFieldsOfView(unit));
             }
             return fovs;
         }

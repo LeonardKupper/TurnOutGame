@@ -10,6 +10,18 @@ namespace TurnOut.Core.Models.Entities.Units
 
             // striker can shoot a beam
             AddExtension<BeamShootingExtension>();
+
+            // set up FOV
+            ConfigureExtension<VisionExtension>(v =>
+            {
+                v.RelativeFOVs.Add(new RelativeFieldOfView
+                {
+                    AngleOffset = 0,
+                    PostionOffset = (front: 0.45f, 0.0f),
+                    ViewAngle = 80,
+                    ViewDepth = 100.0f
+                });
+            });
         }
     }
 

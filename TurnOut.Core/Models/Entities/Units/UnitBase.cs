@@ -17,6 +17,16 @@ namespace TurnOut.Core.Models.Entities.Units
         {
             base.SetupBehavior();
 
+            // Default vision extension:
+            AddExtension<VisionExtension>();
+            ConfigureExtension<VisionExtension>(v => v.RelativeFOVs.Add(
+                // add a default small sensing radius of 1 field
+                new RelativeFieldOfView {
+                    ViewAngle = 360,
+                    ViewDepth = 1.41f
+                }
+            ));
+
             // Default moves per turn:
             MovesPerTurn = 3;
 

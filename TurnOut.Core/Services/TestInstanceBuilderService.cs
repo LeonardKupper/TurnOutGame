@@ -23,7 +23,7 @@ namespace TurnOut.Core.Services
             Player alice = new Player
             {
                 Team = teamAlpha,
-                Name = "Alice"
+                Name = "Spieler-A"
             };
             alice.Units = new List<UnitBase>
             {
@@ -36,8 +36,19 @@ namespace TurnOut.Core.Services
                 {
                     Player = alice,
                     Facing = UnitDirection.North
-                }
+                },
+                new DasherUnit
+                {
+                    Player = alice,
+                    Facing = UnitDirection.West
+                },
+                new StrikerUnit
+                {
+                    Player = alice,
+                    Facing = UnitDirection.West
+                },
             };
+            /*
             Player adam = new Player
             {
                 Team = teamAlpha,
@@ -56,6 +67,7 @@ namespace TurnOut.Core.Services
                     Facing = UnitDirection.West
                 },
             };
+            */
             teamAlpha.Players = new List<Player> { alice };
 
 
@@ -63,7 +75,7 @@ namespace TurnOut.Core.Services
             Player bob = new Player
             {
                 Team = teamOmega,
-                Name = "Bob"
+                Name = "Spieler-B"
             };
             bob.Units = new List<UnitBase>
             {
@@ -76,8 +88,19 @@ namespace TurnOut.Core.Services
                 {
                     Player = bob,
                     Facing = UnitDirection.South
-                }
+                },
+                new DasherUnit
+                {
+                    Player = bob,
+                    Facing = UnitDirection.East
+                },
+                new StrikerUnit
+                {
+                    Player = bob,
+                    Facing = UnitDirection.East
+                },
             };
+            /*
             Player berta = new Player
             {
                 Team = teamOmega,
@@ -96,7 +119,8 @@ namespace TurnOut.Core.Services
                     Facing = UnitDirection.East
                 },
             };
-            teamOmega.Players = new List<Player> { };
+            */
+            teamOmega.Players = new List<Player> { bob };
 
             var gi = new GameInstance
             {
@@ -108,16 +132,15 @@ namespace TurnOut.Core.Services
             };
 
             // Place units
-            gi.GameWorld.Board[10, 7] = alice.Units[0];
-            //gi.GameWorld.Board[17, 14] = alice.Units[0];
-            //gi.GameWorld.Board[18, 14] = alice.Units[1];
-            //gi.GameWorld.Board[19, 13] = adam.Units[0];
-            //gi.GameWorld.Board[19, 12] = adam.Units[1];
+            gi.GameWorld.Board[17, 14] = alice.Units[0];
+            gi.GameWorld.Board[18, 14] = alice.Units[1];
+            gi.GameWorld.Board[19, 13] = alice.Units[2];
+            gi.GameWorld.Board[19, 12] = alice.Units[3];
 
             gi.GameWorld.Board[2, 0] = bob.Units[0];
             gi.GameWorld.Board[1, 0] = bob.Units[1];
-            gi.GameWorld.Board[0, 1] = berta.Units[0];
-            gi.GameWorld.Board[0, 2] = berta.Units[1];
+            gi.GameWorld.Board[0, 1] = bob.Units[2];
+            gi.GameWorld.Board[0, 2] = bob.Units[3];
 
             // Place obstacles
             List<(int x, int y)> obstacleMap = new List<(int x, int y)>
