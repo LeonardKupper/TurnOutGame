@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TurnOut.Core", "TurnOut.Cor
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TurnOut.DbgVis", "TurnOut.DbgVis\TurnOut.DbgVis.csproj", "{1DD0953E-DD6E-44B9-91C1-BF941FF5B253}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TurnOut.App", "TurnOut.App\TurnOut.App.csproj", "{58E4D995-DDC5-4EF3-B133-C376A990812E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{1DD0953E-DD6E-44B9-91C1-BF941FF5B253}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1DD0953E-DD6E-44B9-91C1-BF941FF5B253}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1DD0953E-DD6E-44B9-91C1-BF941FF5B253}.Release|Any CPU.Build.0 = Release|Any CPU
+		{58E4D995-DDC5-4EF3-B133-C376A990812E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{58E4D995-DDC5-4EF3-B133-C376A990812E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{58E4D995-DDC5-4EF3-B133-C376A990812E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{58E4D995-DDC5-4EF3-B133-C376A990812E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

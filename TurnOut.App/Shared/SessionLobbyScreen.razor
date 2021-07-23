@@ -1,0 +1,31 @@
+﻿@using TurnOut.Core.Services
+@using TurnOut.Core.Models
+
+<div style="@($"position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; opacity: {ScreenOpacity}; left: {ScreenLeftPosition}; text-align: center; transition: all 2s;")">
+    <div class="loc loc-hcvc loc-smooth">
+        <input class="menuNameInput" type="text" spellcheck="false" readonly value="@Session?.SessionCode">
+    </div>
+</div>
+
+@code {
+
+    [CascadingParameter]
+    public ClientService _clientService { get; set; }
+
+    public DisplayState DisplayState => (_clientService.CurrentScreen - GameScreen.SessionLobby) switch
+    {
+        (< 0) => DisplayState.Before,
+        (> 0) => DisplayState.After,
+        _ => DisplayState.Display
+    };
+    public string ScreenOpacity => (DisplayState == DisplayState.Display) ? "1.0" : "0.0";
+    public string ScreenLeftPosition => DisplayState switch
+    {
+        DisplayState.Before => "100vw",
+        DisplayState.After => "-100vw",
+        _ => "0vw"
+    };
+
+    public GameSession Session => _clientService.Player?.Session;
+
+}

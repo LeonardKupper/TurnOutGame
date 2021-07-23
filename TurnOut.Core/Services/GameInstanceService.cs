@@ -9,6 +9,65 @@ using TurnOut.Core.Models;
 
 namespace TurnOut.Core.Services
 {
+    public class GameSessionService
+    {
+        private Dictionary<string, GameSession> ActiveSessions { get; set; }
+        private object SessionCreationLock { get; set; } = new object();
+
+        public GameSessionService()
+        {
+            ActiveSessions = new Dictionary<string, GameSession>();
+        }
+
+        public GameSession CreateNewSession()
+        {
+            GameSession session;
+            lock (SessionCreationLock)
+            {
+                session = new GameSession
+                {
+                    ConnectedPlayers = new HashSet<Player>(),
+                    SessionCode = GenerateRandomSessionCode()
+                };
+                ActiveSessions.Add(session.SessionCode, session);
+            }
+            return session;
+        }
+
+        public GameSession FindSessionByCode(string sessionCode)
+        {
+            return ActiveSessions.GetValueOrDefault(sessionCode);
+        }
+
+        public string GenerateRandomSessionCode()
+        {
+            string sessionCode;
+            do
+            {
+                sessionCode = GenerateRandomString("ABCDEFGHIJKLMNOPQRSTUVWXYZ", 6);
+            } while (ActiveSessions.ContainsKey(sessionCode));
+            return sessionCode;
+        }
+
+        public string GenerateRandomString(string baseSet, ushort length)
+        {
+            var stringChars = new char[length];
+            var random = new Random();
+            for (int i = 0; i < stringChars.Length; i++)
+            {
+                stringChars[i] = baseSet[random.Next(baseSet.Length)];
+            }
+            return new string(stringChars);
+        }
+
+        public void AddPlayerToSession(GameSession gameSession, Player player)
+        {
+            gameSession.ConnectedPlayers.Add(player);
+            player.Session = gameSession;
+        }
+    }
+
+
     /// <summary>
     /// Main Service responsible for creating and managing game state.
     /// </summary>

@@ -1,0 +1,54 @@
+﻿
+@using TurnOut.Core.Services
+@using TurnOut.Core.Models
+
+<div style="@($"position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 1; opacity: {ScreenOpacity}; left: {ScreenLeftPosition}; text-align: center; transition: all 2s;")">
+
+    <div class="loc loc-hcvc loc-smooth">
+        <p class="menuText">What's your name?</p>
+        <input class="menuNameInput" maxlength="14" type="text" spellcheck="false" @bind="ChosenPlayerName">
+        <p @onclick="CreateSession" class="menuText menuButton" style="margin-top: 8rem;">Create Session</p>
+        <p @onclick="JoinSession" class="menuText menuButton">Join Session</p>
+    </div>
+</div>
+
+@code {
+
+    [CascadingParameter]
+    public ClientService _clientService { get; set; }
+
+    public DisplayState DisplayState => (_clientService.CurrentScreen - GameScreen.MainMenu) switch
+    {
+        (< 0) => DisplayState.Before,
+        (> 0) => DisplayState.After,
+        _ => DisplayState.Display
+    };
+
+
+    public string ScreenOpacity => (DisplayState == DisplayState.Display) ? "1.0" : "0.0";
+    public string ScreenLeftPosition => DisplayState switch
+    {
+        DisplayState.Before => "100vw",
+        DisplayState.After => "-100vw",
+        _ => "0vw"
+    };
+
+
+    public string ChosenPlayerName { get; set; }
+
+    public bool ValidInput
+        => (ChosenPlayerName is not null)
+        && (ChosenPlayerName.Length >= 3)
+        && (ChosenPlayerName.Length >= 14);
+
+    public void CreateSession()
+    {
+        _clientService.CreateAndJoinSession();
+        _clientService.SwitchToScreen(GameScreen.SessionLobby);
+    }
+
+    public void JoinSession()
+    {
+        _clientService.SwitchToScreen(GameScreen.SessionLobby);
+    }
+}
